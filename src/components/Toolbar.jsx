@@ -1,4 +1,4 @@
-import { Plus } from 'lucide-react'
+import { Plus, Search } from 'lucide-react'
 import DataSourceToggle from './DataSourceToggle'
 
 const FILTERS = [
@@ -15,6 +15,8 @@ const SORTS = [
 function Toolbar({
   dataSource,
   onDataSourceChange,
+  search,
+  onSearchChange,
   filter,
   onFilterChange,
   sort,
@@ -25,6 +27,20 @@ function Toolbar({
     <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
       <div className="flex flex-wrap items-center gap-4">
         <DataSourceToggle source={dataSource} onChange={onDataSourceChange} />
+
+        <div className="relative">
+          <Search
+            size={15}
+            className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400"
+          />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => onSearchChange(e.target.value)}
+            placeholder="제목 검색"
+            className="rounded-lg border border-gray-200 py-1.5 pl-8 pr-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+          />
+        </div>
 
         <div className="flex rounded-lg border border-gray-200 overflow-hidden">
           {FILTERS.map((f) => (

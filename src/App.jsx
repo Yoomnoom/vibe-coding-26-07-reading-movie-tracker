@@ -18,6 +18,7 @@ function App() {
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
   const [filter, setFilter] = useState('all')
+  const [search, setSearch] = useState('')
   const [sort, setSort] = useState('date')
   const [modalMode, setModalMode] = useState(null) // 'create' | 'edit' | null
   const [editingEntry, setEditingEntry] = useState(null)
@@ -66,14 +67,16 @@ function App() {
   useEffect(() => loadEntries(), [loadEntries])
 
   const visibleEntries = useMemo(() => {
-    const filtered =
-      filter === 'all' ? entries : entries.filter((e) => e.type === filter)
+    const query = search.trim().toLowerCase()
+    const filtered = entries
+      .filter((e) => filter === 'all' || e.type === filter)
+      .filter((e) => !query || e.title.toLowerCase().includes(query))
 
     return [...filtered].sort((a, b) => {
       if (sort === 'rating') return b.rating - a.rating
       return b.completedDate.localeCompare(a.completedDate)
     })
-  }, [entries, filter, sort])
+  }, [entries, filter, search, sort])
 
   const handleCreate = async (formData) => {
     try {
@@ -173,6 +176,8 @@ function App() {
         <Toolbar
           dataSource={dataSource}
           onDataSourceChange={setDataSource}
+          search={search}
+          onSearchChange={setSearch}
           filter={filter}
           onFilterChange={setFilter}
           sort={sort}
