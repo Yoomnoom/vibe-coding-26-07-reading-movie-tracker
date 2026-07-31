@@ -1,4 +1,5 @@
 import { Plus } from 'lucide-react'
+import DataSourceToggle from './DataSourceToggle'
 
 const FILTERS = [
   { value: 'all', label: '전체' },
@@ -11,10 +12,20 @@ const SORTS = [
   { value: 'rating', label: '평점순' },
 ]
 
-function Toolbar({ filter, onFilterChange, sort, onSortChange, onAddClick }) {
+function Toolbar({
+  dataSource,
+  onDataSourceChange,
+  filter,
+  onFilterChange,
+  sort,
+  onSortChange,
+  onAddClick,
+}) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-4">
+        <DataSourceToggle source={dataSource} onChange={onDataSourceChange} />
+
         <div className="flex rounded-lg border border-gray-200 overflow-hidden">
           {FILTERS.map((f) => (
             <button

@@ -10,6 +10,7 @@ const UNDO_DURATION = 5000
 const SKELETON_COUNT = 8
 
 function App() {
+  const [dataSource, setDataSource] = useState('notion') // 'notion' | 'sheets'
   const [entries, setEntries] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [filter, setFilter] = useState('all')
@@ -21,7 +22,14 @@ function App() {
   const undoTimerRef = useRef(null)
 
   useEffect(() => {
+    if (dataSource === 'sheets') {
+      setEntries([])
+      setIsLoading(false)
+      return
+    }
+
     let cancelled = false
+    setIsLoading(true)
 
     fetch('/api/entries')
       .then((res) => res.json())
@@ -39,7 +47,7 @@ function App() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [dataSource])
 
   const visibleEntries = useMemo(() => {
     const filtered =
@@ -98,6 +106,8 @@ function App() {
         </h1>
 
         <Toolbar
+          dataSource={dataSource}
+          onDataSourceChange={setDataSource}
           filter={filter}
           onFilterChange={setFilter}
           sort={sort}
@@ -105,7 +115,11 @@ function App() {
           onAddClick={() => setModalMode('create')}
         />
 
-        {isLoading ? (
+        {dataSource === 'sheets' ? (
+          <p className="text-center text-gray-400 py-20">
+            Google Sheets 연동은 준비 중입니다.
+          </p>
+        ) : isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
             {Array.from({ length: SKELETON_COUNT }).map((_, i) => (
               <EntryCardSkeleton key={i} />
