@@ -1,15 +1,17 @@
-import { useMemo, useRef, useState } from 'react'
-import { initialEntries } from './data/mockEntries'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Toolbar from './components/Toolbar'
 import EntryCard from './components/EntryCard'
+import EntryCardSkeleton from './components/EntryCardSkeleton'
 import EntryModal from './components/EntryModal'
 import ConfirmDeleteModal from './components/ConfirmDeleteModal'
 import UndoToast from './components/UndoToast'
 
 const UNDO_DURATION = 5000
+const SKELETON_COUNT = 8
 
 function App() {
-  const [entries, setEntries] = useState(initialEntries)
+  const [entries, setEntries] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
   const [filter, setFilter] = useState('all')
   const [sort, setSort] = useState('date')
   const [modalMode, setModalMode] = useState(null) // 'create' | 'edit' | null
@@ -17,6 +19,27 @@ function App() {
   const [deletingEntry, setDeletingEntry] = useState(null)
   const [pendingUndo, setPendingUndo] = useState(null) // { entry, index }
   const undoTimerRef = useRef(null)
+
+  useEffect(() => {
+    let cancelled = false
+
+    fetch('/api/entries')
+      .then((res) => res.json())
+      .then((data) => {
+        if (cancelled) return
+        setEntries(data.entries ?? [])
+      })
+      .catch((err) => {
+        console.error('Failed to load entries from Notion', err)
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const visibleEntries = useMemo(() => {
     const filtered =
@@ -82,7 +105,13 @@ function App() {
           onAddClick={() => setModalMode('create')}
         />
 
-        {visibleEntries.length === 0 ? (
+        {isLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            {Array.from({ length: SKELETON_COUNT }).map((_, i) => (
+              <EntryCardSkeleton key={i} />
+            ))}
+          </div>
+        ) : visibleEntries.length === 0 ? (
           <p className="text-center text-gray-400 py-20">기록이 없습니다.</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
