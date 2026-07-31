@@ -1,44 +1,58 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { AlertCircle, Plus } from 'lucide-react'
 import Toolbar from './components/Toolbar'
 import EntryCard from './components/EntryCard'
 import EntryCardSkeleton from './components/EntryCardSkeleton'
 import EntryModal from './components/EntryModal'
 import ConfirmDeleteModal from './components/ConfirmDeleteModal'
 import UndoToast from './components/UndoToast'
+import ErrorToast from './components/ErrorToast'
 
 const UNDO_DURATION = 5000
+const NOTIFICATION_DURATION = 4000
 const SKELETON_COUNT = 8
 
 function App() {
   const [dataSource, setDataSource] = useState('notion') // 'notion' | 'sheets'
   const [entries, setEntries] = useState([])
   const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
   const [filter, setFilter] = useState('all')
   const [sort, setSort] = useState('date')
   const [modalMode, setModalMode] = useState(null) // 'create' | 'edit' | null
   const [editingEntry, setEditingEntry] = useState(null)
   const [deletingEntry, setDeletingEntry] = useState(null)
   const [pendingUndo, setPendingUndo] = useState(null) // { entry, index }
+  const [notification, setNotification] = useState(null)
   const undoTimerRef = useRef(null)
+  const notificationTimerRef = useRef(null)
 
-  useEffect(() => {
-    if (dataSource === 'sheets') {
-      setEntries([])
-      setIsLoading(false)
-      return
-    }
+  const notifyError = useCallback((message) => {
+    if (notificationTimerRef.current) clearTimeout(notificationTimerRef.current)
+    setNotification(message)
+    notificationTimerRef.current = setTimeout(
+      () => setNotification(null),
+      NOTIFICATION_DURATION,
+    )
+  }, [])
 
+  const loadEntries = useCallback(() => {
     let cancelled = false
     setIsLoading(true)
+    setLoadError(false)
 
     fetch('/api/entries')
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        return res.json()
+      })
       .then((data) => {
         if (cancelled) return
         setEntries(data.entries ?? [])
       })
       .catch((err) => {
         console.error('Failed to load entries from Notion', err)
+        if (!cancelled) setLoadError(true)
       })
       .finally(() => {
         if (!cancelled) setIsLoading(false)
@@ -47,7 +61,17 @@ function App() {
     return () => {
       cancelled = true
     }
-  }, [dataSource])
+  }, [])
+
+  useEffect(() => {
+    if (dataSource === 'sheets') {
+      setEntries([])
+      setLoadError(false)
+      setIsLoading(false)
+      return
+    }
+    return loadEntries()
+  }, [dataSource, loadEntries])
 
   const visibleEntries = useMemo(() => {
     const filtered =
@@ -72,6 +96,7 @@ function App() {
       setModalMode(null)
     } catch (err) {
       console.error('Failed to create entry in Notion', err)
+      notifyError('등록에 실패했습니다. 다시 시도해주세요.')
     }
   }
 
@@ -93,6 +118,7 @@ function App() {
       setEditingEntry(null)
     } catch (err) {
       console.error('Failed to update entry in Notion', err)
+      notifyError('수정에 실패했습니다. 다시 시도해주세요.')
     }
   }
 
@@ -116,6 +142,7 @@ function App() {
       undoTimerRef.current = setTimeout(() => setPendingUndo(null), UNDO_DURATION)
     } catch (err) {
       console.error('Failed to archive entry in Notion', err)
+      notifyError('삭제에 실패했습니다. 다시 시도해주세요.')
     }
   }
 
@@ -140,6 +167,7 @@ function App() {
       })
     } catch (err) {
       console.error('Failed to restore entry in Notion', err)
+      notifyError('되돌리기에 실패했습니다. 항목은 삭제된 상태로 남아 있습니다.')
     }
   }
 
@@ -171,8 +199,34 @@ function App() {
               <EntryCardSkeleton key={i} />
             ))}
           </div>
+        ) : loadError ? (
+          <div className="flex flex-col items-center gap-4 py-20 text-center">
+            <AlertCircle className="text-red-400" size={40} />
+            <p className="text-gray-500">데이터를 불러올 수 없습니다.</p>
+            <button
+              type="button"
+              onClick={loadEntries}
+              className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 cursor-pointer"
+            >
+              다시 시도
+            </button>
+          </div>
+        ) : entries.length === 0 ? (
+          <div className="flex flex-col items-center gap-4 py-20 text-center">
+            <p className="text-gray-500">아직 등록된 기록이 없습니다.</p>
+            <button
+              type="button"
+              onClick={() => setModalMode('create')}
+              disabled={dataSource === 'sheets'}
+              className="flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-3 text-base font-medium text-white hover:bg-blue-700 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <Plus size={20} />새 기록 추가
+            </button>
+          </div>
         ) : visibleEntries.length === 0 ? (
-          <p className="text-center text-gray-400 py-20">기록이 없습니다.</p>
+          <p className="text-center text-gray-400 py-20">
+            조건에 맞는 기록이 없습니다.
+          </p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
             {visibleEntries.map((entry) => (
@@ -224,6 +278,8 @@ function App() {
           onUndo={handleUndo}
         />
       )}
+
+      {notification && <ErrorToast message={notification} />}
     </div>
   )
 }
