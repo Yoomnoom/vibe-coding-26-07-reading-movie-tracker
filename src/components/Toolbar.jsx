@@ -20,7 +20,6 @@ function Toolbar({
   sort,
   onSortChange,
   onAddClick,
-  addDisabled,
 }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
@@ -60,9 +59,7 @@ function Toolbar({
       <button
         type="button"
         onClick={onAddClick}
-        disabled={addDisabled}
-        title={addDisabled ? 'Google Sheets 연동은 준비 중입니다.' : undefined}
-        className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-blue-600"
+        className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 cursor-pointer"
       >
         <Plus size={16} />새 기록 추가
       </button>

@@ -41,7 +41,7 @@ function App() {
     setIsLoading(true)
     setLoadError(false)
 
-    fetch('/api/entries')
+    fetch(`/api/entries?source=${dataSource}`)
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         return res.json()
@@ -51,7 +51,7 @@ function App() {
         setEntries(data.entries ?? [])
       })
       .catch((err) => {
-        console.error('Failed to load entries from Notion', err)
+        console.error(`Failed to load entries from ${dataSource}`, err)
         if (!cancelled) setLoadError(true)
       })
       .finally(() => {
@@ -61,17 +61,9 @@ function App() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [dataSource])
 
-  useEffect(() => {
-    if (dataSource === 'sheets') {
-      setEntries([])
-      setLoadError(false)
-      setIsLoading(false)
-      return
-    }
-    return loadEntries()
-  }, [dataSource, loadEntries])
+  useEffect(() => loadEntries(), [loadEntries])
 
   const visibleEntries = useMemo(() => {
     const filtered =
@@ -85,7 +77,7 @@ function App() {
 
   const handleCreate = async (formData) => {
     try {
-      const res = await fetch('/api/entries', {
+      const res = await fetch(`/api/entries?source=${dataSource}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
@@ -95,14 +87,14 @@ function App() {
       setEntries((prev) => [entry, ...prev])
       setModalMode(null)
     } catch (err) {
-      console.error('Failed to create entry in Notion', err)
+      console.error(`Failed to create entry in ${dataSource}`, err)
       notifyError('등록에 실패했습니다. 다시 시도해주세요.')
     }
   }
 
   const handleUpdate = async (updatedEntry) => {
     try {
-      const res = await fetch(`/api/entries/${updatedEntry.id}`, {
+      const res = await fetch(`/api/entries/${updatedEntry.id}?source=${dataSource}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -117,7 +109,7 @@ function App() {
       setModalMode(null)
       setEditingEntry(null)
     } catch (err) {
-      console.error('Failed to update entry in Notion', err)
+      console.error(`Failed to update entry in ${dataSource}`, err)
       notifyError('수정에 실패했습니다. 다시 시도해주세요.')
     }
   }
@@ -128,7 +120,7 @@ function App() {
     setDeletingEntry(null)
 
     try {
-      const res = await fetch(`/api/entries/${target.id}`, {
+      const res = await fetch(`/api/entries/${target.id}?source=${dataSource}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ archived: true }),
@@ -141,7 +133,7 @@ function App() {
       setPendingUndo({ entry: target, index })
       undoTimerRef.current = setTimeout(() => setPendingUndo(null), UNDO_DURATION)
     } catch (err) {
-      console.error('Failed to archive entry in Notion', err)
+      console.error(`Failed to archive entry in ${dataSource}`, err)
       notifyError('삭제에 실패했습니다. 다시 시도해주세요.')
     }
   }
@@ -153,7 +145,7 @@ function App() {
     setPendingUndo(null)
 
     try {
-      const res = await fetch(`/api/entries/${entry.id}`, {
+      const res = await fetch(`/api/entries/${entry.id}?source=${dataSource}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ archived: false }),
@@ -166,7 +158,7 @@ function App() {
         return next
       })
     } catch (err) {
-      console.error('Failed to restore entry in Notion', err)
+      console.error(`Failed to restore entry in ${dataSource}`, err)
       notifyError('되돌리기에 실패했습니다. 항목은 삭제된 상태로 남아 있습니다.')
     }
   }
@@ -186,14 +178,9 @@ function App() {
           sort={sort}
           onSortChange={setSort}
           onAddClick={() => setModalMode('create')}
-          addDisabled={dataSource === 'sheets'}
         />
 
-        {dataSource === 'sheets' ? (
-          <p className="text-center text-gray-400 py-20">
-            Google Sheets 연동은 준비 중입니다.
-          </p>
-        ) : isLoading ? (
+        {isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
             {Array.from({ length: SKELETON_COUNT }).map((_, i) => (
               <EntryCardSkeleton key={i} />
@@ -217,8 +204,7 @@ function App() {
             <button
               type="button"
               onClick={() => setModalMode('create')}
-              disabled={dataSource === 'sheets'}
-              className="flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-3 text-base font-medium text-white hover:bg-blue-700 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-3 text-base font-medium text-white hover:bg-blue-700 cursor-pointer"
             >
               <Plus size={20} />새 기록 추가
             </button>
