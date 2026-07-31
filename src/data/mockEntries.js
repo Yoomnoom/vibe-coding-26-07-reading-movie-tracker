@@ -1,0 +1,57 @@
+export const TYPE_LABELS = {
+  book: '책',
+  movie: '영화',
+}
+
+export const initialEntries = [
+  {
+    id: 'seed-1',
+    title: '클린 코드',
+    type: 'book',
+    rating: 5,
+    review: '개발자라면 한 번은 꼭 읽어야 할 책.',
+    completedDate: '2026-07-20',
+    status: '완료',
+    coverUrl: 'https://covers.openlibrary.org/b/isbn/0132350882-L.jpg',
+  },
+  {
+    id: 'seed-2',
+    title: '인터스텔라',
+    type: 'movie',
+    rating: 5,
+    review: '몇 번을 다시 봐도 감동적인 영화.',
+    completedDate: '2026-07-25',
+    status: '완료',
+    coverUrl: 'https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg',
+  },
+  {
+    id: 'seed-3',
+    title: '사피엔스',
+    type: 'book',
+    rating: 4,
+    review: '인류사를 보는 시야가 넓어지는 책.',
+    completedDate: '2026-07-15',
+    status: '완료',
+    coverUrl: '',
+  },
+  {
+    id: 'seed-4',
+    title: '기생충',
+    type: 'movie',
+    rating: 5,
+    review: '한국 영화의 새로운 이정표.',
+    completedDate: '2026-07-10',
+    status: '완료',
+    coverUrl: '',
+  },
+  {
+    id: 'seed-5',
+    title: '1984',
+    type: 'book',
+    rating: 4,
+    review: '지금 읽어도 소름 돋는 디스토피아.',
+    completedDate: '2026-07-05',
+    status: '완료',
+    coverUrl: 'https://covers.openlibrary.org/b/isbn/9780451524935-L.jpg',
+  },
+]
