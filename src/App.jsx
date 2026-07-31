@@ -59,43 +59,88 @@ function App() {
     })
   }, [entries, filter, sort])
 
-  const handleCreate = (formData) => {
-    const newEntry = {
-      ...formData,
-      id: `entry-${Date.now()}`,
+  const handleCreate = async (formData) => {
+    try {
+      const res = await fetch('/api/entries', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      })
+      if (!res.ok) throw new Error(await res.text())
+      const { entry } = await res.json()
+      setEntries((prev) => [entry, ...prev])
+      setModalMode(null)
+    } catch (err) {
+      console.error('Failed to create entry in Notion', err)
     }
-    setEntries((prev) => [newEntry, ...prev])
-    setModalMode(null)
   }
 
-  const handleUpdate = (updatedEntry) => {
-    setEntries((prev) =>
-      prev.map((e) => (e.id === updatedEntry.id ? updatedEntry : e)),
-    )
-    setModalMode(null)
-    setEditingEntry(null)
+  const handleUpdate = async (updatedEntry) => {
+    try {
+      const res = await fetch(`/api/entries/${updatedEntry.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          rating: updatedEntry.rating,
+          review: updatedEntry.review,
+          coverUrl: updatedEntry.coverUrl,
+        }),
+      })
+      if (!res.ok) throw new Error(await res.text())
+      const { entry } = await res.json()
+      setEntries((prev) => prev.map((e) => (e.id === entry.id ? entry : e)))
+      setModalMode(null)
+      setEditingEntry(null)
+    } catch (err) {
+      console.error('Failed to update entry in Notion', err)
+    }
   }
 
-  const handleConfirmDelete = () => {
-    const index = entries.findIndex((e) => e.id === deletingEntry.id)
-    setEntries((prev) => prev.filter((e) => e.id !== deletingEntry.id))
-
-    if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
-    setPendingUndo({ entry: deletingEntry, index })
-    undoTimerRef.current = setTimeout(() => setPendingUndo(null), UNDO_DURATION)
-
+  const handleConfirmDelete = async () => {
+    const target = deletingEntry
+    const index = entries.findIndex((e) => e.id === target.id)
     setDeletingEntry(null)
+
+    try {
+      const res = await fetch(`/api/entries/${target.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ archived: true }),
+      })
+      if (!res.ok) throw new Error(await res.text())
+
+      setEntries((prev) => prev.filter((e) => e.id !== target.id))
+
+      if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
+      setPendingUndo({ entry: target, index })
+      undoTimerRef.current = setTimeout(() => setPendingUndo(null), UNDO_DURATION)
+    } catch (err) {
+      console.error('Failed to archive entry in Notion', err)
+    }
   }
 
-  const handleUndo = () => {
+  const handleUndo = async () => {
     if (!pendingUndo) return
+    const { entry, index } = pendingUndo
     if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
-    setEntries((prev) => {
-      const next = [...prev]
-      next.splice(pendingUndo.index, 0, pendingUndo.entry)
-      return next
-    })
     setPendingUndo(null)
+
+    try {
+      const res = await fetch(`/api/entries/${entry.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ archived: false }),
+      })
+      if (!res.ok) throw new Error(await res.text())
+
+      setEntries((prev) => {
+        const next = [...prev]
+        next.splice(index, 0, entry)
+        return next
+      })
+    } catch (err) {
+      console.error('Failed to restore entry in Notion', err)
+    }
   }
 
   return (
@@ -113,6 +158,7 @@ function App() {
           sort={sort}
           onSortChange={setSort}
           onAddClick={() => setModalMode('create')}
+          addDisabled={dataSource === 'sheets'}
         />
 
         {dataSource === 'sheets' ? (
